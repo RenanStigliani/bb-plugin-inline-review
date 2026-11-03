@@ -5,8 +5,7 @@ plugin-owned KV storage on the user's BB server. Sending feedback creates an
 ordinary message in the selected thread and uses that thread's configured agent
 provider.
 
-For security reports, use GitHub's private vulnerability reporting for
-[`rdanhau/bb-plugin-inline-review`](https://github.com/rdanhau/bb-plugin-inline-review/security/advisories/new).
+Report issues in [RenanStigliani/bb-plugin-inline-review](https://github.com/RenanStigliani/bb-plugin-inline-review/issues). Contact the repository owner before sharing sensitive details.
 Do not include credentials, private repository contents, or other secrets in a
 public issue.
 

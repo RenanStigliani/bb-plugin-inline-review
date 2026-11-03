@@ -1,7 +1,7 @@
 {
-  "id": "inline-review",
-  "displayName": "Inline Review",
-  "description": "Turn passages from an assistant response into one clear revision request. Mark comments and removals while you read, keep them highlighted across navigation, add overall feedback, and send the full review to the same thread. Drafts stay on your BB server; no external service or account is required. Requires BB 0.43.1 or later.",
+  "id": "inline-review-local",
+  "displayName": "Inline Review (Local)",
+  "description": "Review selected agent text and run custom selection actions in BB.",
   "icon": "MessageSquare",
   "screenshots": [
     "./screenshots/inline-review/select-feedback.png",
@@ -20,15 +20,15 @@
     "comments"
   ],
   "author": {
-    "name": "rdanhau",
-    "github": "rdanhau",
-    "url": "https://github.com/rdanhau"
+    "name": "Renan Stigliani",
+    "github": "RenanStigliani",
+    "url": "https://github.com/RenanStigliani"
   },
   "category": "thread-content",
   "source": {
     "git": {
-      "url": "https://github.com/rdanhau/bb-plugin-inline-review.git",
-      "range": "^1.0.0"
+      "url": "https://github.com/RenanStigliani/bb-plugin-inline-review.git",
+      "range": "^1.1.0"
     }
   }
 }

@@ -220,3 +220,29 @@ it("sends overall-only feedback and preserves a mutation queued during delivery"
   ).toHaveLength(1);
   expect(send).toHaveBeenCalledTimes(1);
 });
+
+it("saves action order and sends custom instructions without consuming staged feedback", async () => {
+  const h = await setup();
+  const actions = result(await h.call("getActions", {}));
+  const agree = actions.find((action: any) => action.id === "agree");
+  agree.behavior = "send";
+  const reordered = [...actions].reverse();
+  expect(result(await h.call("saveActions", { actions: reordered }))).toEqual(reordered);
+  await h.reload();
+  expect(result(await h.call("getActions", {}))).toEqual(reordered);
+  await h.call("addAnnotation", input());
+  const { feedback, threadId, ...selection } = input("selected");
+  result(await h.call("sendSelectionAction", { actionId: "agree", selection }));
+  expect(h.send).toHaveBeenCalledOnce();
+  expect(h.harness.inspection.sdk.callsTo("threads.send")[0][0]).toMatchObject({ threadId: "t", input: [{ text: expect.stringContaining("I agree, do this now.") }] });
+  expect(result(await h.call("getDraft", { threadId: "t" })).annotations).toHaveLength(1);
+  expect((await h.call("sendSelectionAction", { actionId: "missing", selection })).ok).toBe(false);
+});
+
+it("rejects blank instructions, duplicate IDs and missing built-in actions", async () => {
+  const h = await setup();
+  const actions = result(await h.call("getActions", {}));
+  expect((await h.call("saveActions", { actions: actions.slice(1) })).ok).toBe(false);
+  expect((await h.call("saveActions", { actions: [...actions, actions[0]] })).ok).toBe(false);
+  expect((await h.call("saveActions", { actions: actions.map((action: any) => action.id === "agree" ? { ...action, instruction: " " } : action) })).ok).toBe(false);
+});

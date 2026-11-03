@@ -228,9 +228,10 @@ it("creates in the overlay, edits in place and sends from the composer banner", 
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByLabelText("Annotation feedback")),
     );
-    const removeButton = screen.getByRole("button", { name: "Remove" });
-    removeButton.focus();
-    expect(document.activeElement).toBe(removeButton);
+    const cancelButton = screen.getByRole("button", { name: "Cancel" });
+    cancelButton.focus();
+    expect(document.activeElement).toBe(cancelButton);
+    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
     expect(screen.queryByText(/stays in the current thread/i)).toBeNull();
     expect(screen.queryByLabelText("Feedback type")).toBeNull();
     await user.type(
@@ -241,16 +242,24 @@ it("creates in the overlay, edits in place and sends from the composer banner", 
     await banner.behavior.emitRealtime("draft-changed", { threadId: "thread-1" });
     await screen.findByText("1 item");
     expect(screen.queryByText("Comment: Explain the assumption")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Review" }));
+    await user.click(screen.getByRole("button", { name: "Feedback" }));
     expect(screen.getByText(/Comment: Explain the\s+assumption/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Feedback" }).getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getAllByRole("button", { name: "Send" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Clear (1)" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Feedback" }));
+    expect(screen.queryByLabelText("Overall feedback")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Feedback" }));
+
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
     await screen.findByRole("heading", { name: "Edit feedback" });
     await user.clear(screen.getByLabelText("Annotation feedback"));
-    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.type(screen.getByLabelText("Annotation feedback"), "Revised comment");
+    await user.click(screen.getByRole("button", { name: "Add" }));
     await waitFor(() => expect(screen.queryByRole("heading", { name: "Edit feedback" })).toBeNull());
     await banner.behavior.emitRealtime("draft-changed", { threadId: "thread-1" });
-    await screen.findByText("Remove");
+    await screen.findByText("Comment: Revised comment");
 
     const overall = screen.getByLabelText("Overall feedback") as HTMLTextAreaElement;
     expect(overall.getAttribute("aria-keyshortcuts")).toBe("Control+Enter Meta+Enter");
@@ -266,7 +275,7 @@ it("creates in the overlay, edits in place and sends from the composer banner", 
         input: [
           {
             text: expect.stringMatching(
-              /Remove:[\s\S]*Keep the revision concise\.\nPreserve this line\./,
+              /Revised comment[\s\S]*Keep the revision concise\.\nPreserve this line\./,
             ),
           },
         ],
@@ -276,14 +285,14 @@ it("creates in the overlay, edits in place and sends from the composer banner", 
     await rpc.setOverallFeedback({ threadId: "thread-1", value: "Discard this draft." });
     await banner.behavior.emitRealtime("draft-changed", { threadId: "thread-1" });
     await screen.findByText("Feedback");
-    await user.click(screen.getByRole("button", { name: "Review" }));
-    await user.click(screen.getByRole("button", { name: "Clear" }));
+    await user.click(screen.getByRole("button", { name: "Feedback" }));
+    await user.click(screen.getByRole("button", { name: /^Clear \(/ }));
     expect(screen.getByRole("group", { name: "Confirm clearing all feedback" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Keep" }));
     expect((screen.getByLabelText("Overall feedback") as HTMLTextAreaElement).value).toBe(
       "Discard this draft.",
     );
-    await user.click(screen.getByRole("button", { name: "Clear" }));
+    await user.click(screen.getByRole("button", { name: /^Clear \(/ }));
     await user.click(screen.getByRole("button", { name: "Clear all" }));
     await waitFor(() => expect(screen.queryByText("Feedback")).toBeNull());
   } finally {
@@ -291,4 +300,123 @@ it("creates in the overlay, edits in place and sends from the composer banner", 
     overlay.lifecycle.unmount();
     await host.harness.lifecycle.dispose();
   }
+});
+
+it("anchors the editor to the passage and uses the top layer outside the host overlay", async () => {
+  const { reviewHighlights } = await import("../lib/review-highlights");
+  const node = document.createTextNode("exact passage");
+  document.body.append(node);
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  range.getBoundingClientRect = () => ({ left: 100, top: 100, bottom: 120 }) as DOMRect;
+  const anchor = vi.spyOn(reviewHighlights, "getEditorRange").mockReturnValue(range);
+  const show = vi.fn(function (this: HTMLElement) { this.style.display = "block"; });
+  const hide = vi.fn();
+  Object.defineProperty(HTMLElement.prototype, "showPopover", { configurable: true, value: show });
+  Object.defineProperty(HTMLElement.prototype, "hidePopover", { configurable: true, value: hide });
+  const app = await loadPluginApp(() => import("../app"));
+  const overlay = renderSlot(app.appOverlays[0], {});
+  try {
+    await act(async () => {
+      await app.messageActions[0].run({
+        threadId: "thread-1", message, selectedText: "exact passage", openPanel: vi.fn(),
+      });
+    });
+    const editor = await screen.findByRole("dialog");
+    expect(editor.parentElement).toBe(document.body);
+    expect(editor.getAttribute("data-bb-plugin")).toBe("inline-review-local");
+    expect(editor.getAttribute("popover")).toBe("manual");
+    expect(show).toHaveBeenCalledOnce();
+    expect(editor.style.left).toBe("100px");
+    expect(editor.style.top).toBe("128px");
+    range.getBoundingClientRect = () => ({ left: 100, top: 740, bottom: 760 }) as DOMRect;
+    vi.spyOn(editor, "getBoundingClientRect").mockReturnValue({ width: 320, height: 200 } as DOMRect);
+    window.dispatchEvent(new Event("resize"));
+    expect(editor.style.top).toBe("532px");
+    overlay.lifecycle.unmount();
+    expect(hide).toHaveBeenCalledOnce();
+  } finally {
+    anchor.mockRestore();
+    node.remove();
+    delete (HTMLElement.prototype as Partial<HTMLElement>).showPopover;
+    delete (HTMLElement.prototype as Partial<HTMLElement>).hidePopover;
+  }
+});
+
+it("saves the comment before Send Now sends the draft", async () => {
+  const { default: userEvent } = await import("@testing-library/user-event");
+  const app = await loadPluginApp(() => import("../app"));
+  const draft = { threadId: "thread-1", annotations: [], overallFeedback: "", updatedAt: new Date().toISOString() };
+  const calls: string[] = [];
+  const overlay = renderSlot(app.appOverlays[0], {}, { rpc: {
+    addAnnotation: (input: unknown) => {
+      calls.push("save");
+      expect(input).toMatchObject({ feedback: { kind: "comment", body: "Explain this" } });
+      return draft;
+    },
+    sendDraft: () => {
+      calls.push("send");
+      return { draft, delivery: "queued" };
+    },
+  } });
+  try {
+    await act(async () => {
+      await app.messageActions[0].run({ threadId: "thread-1", message, selectedText: "exact passage", openPanel: vi.fn() });
+    });
+    const user = userEvent.setup();
+    const send = screen.getByRole("button", { name: "Send Now" }) as HTMLButtonElement;
+    expect(send.disabled).toBe(true);
+    expect(send.textContent?.trim()).toBe("");
+    await user.type(screen.getByLabelText("Annotation feedback"), "Explain this");
+    await user.click(send);
+    await waitFor(() => expect(calls).toEqual(["save", "send"]));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  } finally {
+    overlay.lifecycle.unmount();
+  }
+});
+
+it("reorders settings by drag and drop and saves the edited actions", async () => {
+  const { defaultActions } = await import("../lib/actions");
+  const { fireEvent } = await import("@testing-library/react");
+  const { default: userEvent } = await import("@testing-library/user-event");
+  const app = await loadPluginApp(() => import("../app"));
+  let saved: unknown;
+  const slot = renderSlot(app.settingsSections[0], {}, { rpc: {
+    getActions: () => defaultActions,
+    saveActions: (input: unknown) => { saved = input; return (input as { actions: typeof defaultActions }).actions; },
+  } });
+  try {
+    const grip = await screen.findByRole("button", { name: "Drag Agree" });
+    const target = screen.getByRole("button", { name: "Drag Add to chat" }).closest("li")!;
+    const dataTransfer = { setData: vi.fn(), effectAllowed: "", dropEffect: "" };
+    fireEvent.dragStart(grip, { dataTransfer });
+    fireEvent.dragOver(target, { dataTransfer });
+    fireEvent.drop(target, { dataTransfer });
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Display Agree" }), "inline");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Behavior Agree" }), "send");
+    await user.click(screen.getByRole("button", { name: "Save actions" }));
+    await waitFor(() => expect(saved).toMatchObject({ actions: [{ id: "agree", placement: "inline", behavior: "send" }, { id: "native" }, { id: "feedback" }, { id: "new-thread" }, { id: "parallel" }] }));
+  } finally { slot.lifecycle.unmount(); }
+});
+
+it("prefills custom instructions or sends directly according to the action", async () => {
+  const { queueSelectionAction, defaultActions } = await import("../lib/actions");
+  const { reviewEditorStore } = await import("../lib/editor-store");
+  const app = await loadPluginApp(() => import("../app"));
+  const direct = vi.fn(() => ({ delivery: "queued" }));
+  const slot = renderSlot(app.appOverlays[0], {}, { rpc: { getActions: () => defaultActions, sendSelectionAction: direct } });
+  try {
+    queueSelectionAction(defaultActions[2]);
+    await act(async () => app.messageActions[0].run({ threadId: "thread-1", message, selectedText: "exact passage", openPanel: vi.fn() }));
+    expect((screen.getByLabelText("Annotation feedback") as HTMLTextAreaElement).value).toBe("I agree, do this now.");
+    expect(direct).not.toHaveBeenCalled();
+    act(() => reviewEditorStore.close());
+    queueSelectionAction({ ...defaultActions[2], behavior: "send" });
+    await act(async () => app.messageActions[0].run({ threadId: "thread-1", message, selectedText: "exact passage", openPanel: vi.fn() }));
+    await waitFor(() => expect(direct).toHaveBeenCalledOnce());
+    expect(direct).toHaveBeenCalledWith(expect.objectContaining({ actionId: "agree", selection: expect.objectContaining({ selectedText: "exact passage" }) }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  } finally { slot.lifecycle.unmount(); }
 });

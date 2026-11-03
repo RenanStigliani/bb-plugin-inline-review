@@ -1,5 +1,6 @@
 import { defineRpcContract } from "@get-bb/plugin-sdk";
 import { z } from "zod";
+import { actionsSchema } from "./lib/actions";
 export const id = z
   .string()
   .min(1)
@@ -66,6 +67,12 @@ export type Selection = z.infer<typeof selectionSchema>;
 const thread = z.strictObject({ threadId: id });
 const item = thread.extend({ annotationId: id });
 export const rpcContract = defineRpcContract({
+  getActions: { input: z.strictObject({}), output: actionsSchema },
+  saveActions: { input: z.strictObject({ actions: actionsSchema }), output: actionsSchema },
+  sendSelectionAction: {
+    input: z.strictObject({ actionId: z.string().min(1).max(100), selection: selectionSchema }),
+    output: z.strictObject({ delivery: z.string() }),
+  },
   getDraft: { input: thread, output: draftSchema },
   addAnnotation: {
     input: thread.extend({

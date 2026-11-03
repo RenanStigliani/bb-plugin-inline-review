@@ -291,6 +291,13 @@ export const reviewHighlights = {
     rebuild();
   },
 
+  getEditorRange(request: import("./editor-store").ReviewEditorRequest) {
+    const id = request.mode === "create" ? request.selection.invocationId : request.annotation.id;
+    const quote = request.mode === "create" ? request.selection.selectedText : request.annotation.quote;
+    const selection = captured.get(id);
+    return (selection ? liveCapturedRange(selection) : null) ?? findUniqueAssistantRange(quote);
+  },
+
   cancelSelection(id: string) {
     const selection = captured.get(id);
     if (!selection || selection.committed) return;

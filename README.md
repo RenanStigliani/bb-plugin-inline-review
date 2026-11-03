@@ -1,139 +1,61 @@
-# Inline Review
+# Inline Review (Local)
 
-Turn a long agent response into a precise revision request. Comment on exact
-passages as you read, then send all of your feedback together.
-
-Agents often produce work that is easier to review in place: an implementation
-plan, a proposed approach, a detailed explanation, or a long generated draft.
-When you have several separate questions or changes, squeezing them into one
-follow-up paragraph makes both the feedback and its target harder to follow.
-
-Inline Review lets you select assistant text, attach a comment or request its
-removal, and keep each passage marked while you continue reading. Add an
-overall note when needed, review the collected items, and send one structured
-message back to the same thread. The agent receives every instruction beside
-the passage it refers to, while the result remains readable in ordinary chat
-history.
-
-## When it helps
-
-- Review and refine a plan before asking the agent to implement it.
-- Ask separate questions about several parts of a technical discussion.
-- Comment on multiple claims or sections in a report, draft, or explanation.
-- Request targeted removals while preserving the overall direction of a response.
-
-## How it works
-
-### 1. Select the passage
-
-Select text in an assistant response and choose **Feedback** from BB's native
-selection menu. You can keep reading instead of stopping to compose a large
-follow-up message from memory.
-
-![Selected assistant text with the Feedback action highlighted](docs/screenshots/inline-review-01-select-feedback.png)
-
-### 2. Attach the instruction
-
-Write a comment tied to that exact quote. Choose **Comment**, or choose
-**Remove** when the passage should be left out of the next revision.
-
-![The feedback editor with a comment about invitation expiry](docs/screenshots/inline-review-02-add-comment.png)
-
-### 3. Collect feedback while you read
-
-Saved comments remain marked in yellow, and removal requests use a red
-strike-through. The compact banner shows how many items are waiting without
-covering the conversation.
-
-![Several staged comments highlighted in a long implementation plan](docs/screenshots/inline-review-03-staged-feedback.png)
-
-### 4. Review the complete request
-
-Expand the banner to edit individual items, remove mistakes, and add an
-overall note that applies to the whole response. Nothing is sent until you
-choose **Send feedback**.
-
-![Three passage comments and overall feedback ready to send](docs/screenshots/inline-review-04-review-draft.png)
-
-### 5. Send one readable message
-
-Inline Review delivers the entire review back to the same thread as one compact,
-numbered message. Each instruction stays beside its quote, so the agent and the
-human reading the chat can understand what should change.
-
-![The structured Review feedback message after delivery](docs/screenshots/inline-review-05-delivered-feedback.png)
+Review selected text in BB agent replies and add custom actions to the selection menu. This is Renan Stigliani's fork of [Inline Review by rdanhau](https://github.com/rdanhau/bb-plugin-inline-review), released under the [MIT License](LICENSE).
 
 ## Install
 
 ```sh
-bb plugin install git:https://github.com/rdanhau/bb-plugin-inline-review.git@semver:^1.0.0
+bb plugin install git:https://github.com/RenanStigliani/bb-plugin-inline-review.git --yes
 ```
 
-Inline Review 1.0.1+ supports BB 0.43.1 and later, including BB 0.44.
+The plugin ID is `inline-review-local`. If the original Inline Review is installed, disable it to avoid duplicate Feedback actions:
 
-## Develop
+```sh
+bb plugin disable inline-review
+```
+
+The two plugins have separate drafts and settings. Disabling the original preserves its data.
+
+## Review a reply
+
+Select text in an assistant reply and choose **Feedback**. A compact editor opens near the passage, above BB's side panel.
+
+- **Add** saves the comment in the thread's feedback draft. Enter also saves; Shift+Enter adds a line.
+- The airplane button saves the comment and sends the full feedback draft immediately.
+- **Cancel** closes the editor without saving its contents.
+
+Click the Feedback banner's header to expand or collapse the draft. You can edit or delete comments, add overall feedback, or choose **Clear (N)** to discard the draft after confirmation. **Send** submits one message containing each quoted passage and its comment. Ctrl+Enter or Command+Enter also sends from the overall-feedback field.
+
+## Configure selection actions
+
+Open **Settings → Installed plugins → Inline Review (Local) → Selection actions**.
+
+Drag the grips to reorder actions, or use the up and down buttons. Each action can appear on the main menu, under **More (⋯)**, or stay hidden. The native **Add to chat** and plugin **Feedback** actions are included.
+
+Choose **Add action** to create a custom label and instruction. Custom actions can open the feedback editor with the instruction filled in, or send it directly with the selected quote. Direct actions leave other saved feedback untouched. Choose **Save actions** to apply changes.
+
+Three examples are included under More: **Agree**, **Do in a new bb thread**, and **Dispatch to parallel workers**. These send instructions to the current agent; that agent carries out any request to create threads or workers.
+
+## Storage and compatibility
+
+Drafts and action settings live on your BB server. Drafts survive reloads and are stored per thread. Sending feedback uses that thread's configured agent provider. Unsaved text in the editor is temporary.
+
+The original BB 0.43.1 and SDK 0.4.87 minimum versions remain in the manifest. This fork was tested against the running BB instance during development; older versions have not been checked. Selection-menu customization and highlight restoration depend on BB's rendered HTML, so BB updates may require changes. Highlights are restored only when a saved quote has one visible matching passage.
+
+## Development
+
+Use a current Node.js version supported by the dependencies. Then run:
 
 ```sh
 npm ci
-bb plugin types --check
 npm test
 npm run typecheck
 bb plugin build
 bb plugin install . --yes
 ```
 
-After edits, run `bb plugin build` and `bb plugin reload inline-review`, or use
-`bb plugin dev`. The development SDK pin is 0.5.29; the manifest supports BB
-0.43.1 and later with Plugin SDK 0.4.87 or later.
-Tests include the SDK's public-import scanner.
+For an installed local copy, rebuild and run `bb plugin reload inline-review-local`, or use `bb plugin dev` to rebuild and reload after edits.
 
-## Behavior details
+The automated checks cover action settings, menu order and visibility, overflow actions, editor placement, drafts, and sending feedback. They do not replace checking the UI in BB.
 
-- **Comment** saves the selected quote with an instruction. Return also saves;
-  Shift+Return inserts a new line where available.
-- **Remove** asks the agent to disregard the quote and accepts an optional
-  reason. It does not alter the original assistant message.
-- The Feedback banner remains hidden while the draft is empty. Expand it to
-  edit or delete items and add **Overall feedback**. Clear asks for confirmation
-  before discarding the complete draft.
-- Ctrl+Enter or ⌘+Enter sends from the overall-feedback field. Delivery uses
-  BB's `auto` policy (sent, queued, or steered). The draft clears only after BB
-  accepts the request, and a failed request preserves it.
-- The outbound message uses a compact numbered format. Comment items contain
-  the quoted passage followed by **Comment:**. Removal items use **Remove:**
-  followed by the quote and an optional **Reason:**. Internal IDs and sequence
-  numbers are never included in the message sent to the agent.
-
-The plugin retains the exact browser range during the current session. After
-BB recreates the page, it restores a highlight only when the quote has one
-whitespace-normalized match across visible rendered assistant messages. This
-allows selections to span Markdown blocks without treating an inactive tab's
-retained DOM as a duplicate. Repeated or otherwise ambiguous passages remain
-saved and reviewable without a highlight. Browsers without the CSS Custom
-Highlight API retain the complete feedback workflow without passage coloring.
-
-## Storage and limits
-
-Saved drafts live in plugin-owned KV storage on your BB server, keyed by thread ID. They survive browser and plugin reloads. The plugin has no external service; submitted feedback enters ordinary thread history and reaches that thread's configured agent provider. Quotes, feedback, message IDs and sequence references are stored, never complete source messages. Unsaved text in the floating editor is transient.
-
-Limits enforced on every RPC and persisted draft: 20,000 characters per quote, 10,000 per annotation body, 20,000 overall, 100 annotations, and 220,000 UTF-8 serialized bytes per draft. Whitespace-only comments/selections are rejected. Deleted-thread events remove drafts. Threads deleted while the plugin is disabled may leave one bounded orphan draft until plugin data is removed.
-
-Concurrent operations are serialized per thread. A second simultaneous send sees the cleared draft and cannot send it again. Different tabs refresh through realtime notifications; simultaneous edits to the same field use the last accepted value. Delivery and KV storage are separate SDK operations: an ambiguous transport/server interruption after host acceptance cannot provide transactional exactly-once guarantees. Check thread history before retrying an uncertain delivery.
-
-## V1 boundaries
-
-Assistant text selection only. No user-message, file, preview, diff, or replacement-renderer annotation. Highlighting uses the public content-script lifecycle and CSS Highlight API without changing rendered message nodes. Reconstructing a range relies on BB's rendered assistant-Markdown containers until the SDK provides persistent selection anchors. The floating card remains app-level because the SDK does not expose selection geometry. BB currently also displays registered message actions in message action bars, including user messages; those invocations show selection guidance and create no annotation. There is no public visibility filter for this surface.
-
-The SDK provides message ID and exact quote, without character offsets. Identical passages within one message cannot be distinguished by occurrence. Source lines are blockquoted in the batch; Comment, optional Reason, and overall feedback text are user instructions. No approval gate, agent tool, settings page, CLI, archive, or annotation-resolution workflow is registered.
-
-See `VERIFICATION.md` for observed live results and remaining verification limits.
-
-## Project information
-
-- [Manual mobile and desktop acceptance checks](docs/TEST_CHECKLIST.md)
-- [Prepared marketplace entry](docs/MARKETPLACE_ENTRY.json)
-- [Release verification](VERIFICATION.md)
-- [Version history](CHANGELOG.md)
-- [Security and privacy](SECURITY.md)
-
-Inline Review is available under the [MIT License](LICENSE).
+See the [changelog](CHANGELOG.md) for version history and the [security notes](SECURITY.md) for data handling. Files under `docs/`, the screenshots, and `VERIFICATION.md` include material from the original project and may show its earlier interface.

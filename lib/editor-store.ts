@@ -1,7 +1,8 @@
+import type { SelectionAction } from "./actions";
 import type { Annotation, Selection } from "../contract";
 
 export type ReviewEditorRequest =
-  | { mode: "create"; selection: Selection }
+  | { mode: "create"; selection: Selection; action?: SelectionAction }
   | { mode: "edit"; threadId: string; annotation: Annotation };
 
 let current: ReviewEditorRequest | null = null;

@@ -1,7 +1,9 @@
 import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import { draftSchema, rpcContract, type ReviewDraft } from "./contract";
+import { actionsSchema, defaultActions } from "./lib/actions";
 import { formatFeedback } from "./lib/format-feedback";
 export default function plugin(bb: BbPluginApi) {
+  const readActions = async () => actionsSchema.parse(await bb.storage.kv.get("selection-actions") ?? defaultActions);
   const locks = new Map<string, Promise<unknown>>();
   const key = (threadId: string) => `draft:${threadId}`;
   const empty = (threadId: string): ReviewDraft => ({
@@ -49,6 +51,31 @@ export default function plugin(bb: BbPluginApi) {
     return i;
   };
   bb.rpc.register(rpcContract, {
+    getActions: () => readActions(),
+    saveActions: async ({ actions }) => {
+      await bb.storage.kv.set("selection-actions", actions);
+      bb.realtime.publish("actions-changed", {});
+      return actions;
+    },
+    sendSelectionAction: async ({ actionId, selection }) => {
+      const action = (await readActions()).find((item) => item.id === actionId);
+      if (!action || action.kind === "native" || action.placement === "hidden" || !action.instruction.trim()) {
+        throw new Error("This action has no instructions or is hidden.");
+      }
+      const result = await bb.sdk.threads.send({
+        threadId: selection.message.threadId,
+        mode: "auto",
+        input: [{ type: "text", text: formatFeedback({
+          threadId: selection.message.threadId,
+          overallFeedback: "",
+          updatedAt: new Date().toISOString(),
+          annotations: [{ id: selection.invocationId, messageId: selection.message.id,
+            sourceSeqEnd: selection.message.sourceSeqEnd, quote: selection.selectedText,
+            kind: "comment", body: action.instruction, createdAt: new Date().toISOString() }],
+        }), mentions: [] }],
+      });
+      return { delivery: result.delivery };
+    },
     getDraft: ({ threadId }) => serial(threadId, () => read(threadId)),
     addAnnotation: ({
       threadId,

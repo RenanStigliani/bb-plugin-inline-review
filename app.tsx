@@ -1,10 +1,13 @@
 import { definePluginApp } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
+import { takeSelectionAction } from "./lib/actions";
+import { ActionSettings } from "./components/ActionSettings";
 import { ReviewBanner } from "./components/ReviewBanner";
 import { ReviewOverlay } from "./components/ReviewOverlay";
 import { reviewEditorStore } from "./lib/editor-store";
 import { reviewHighlights } from "./lib/review-highlights";
 export default definePluginApp((app) => {
+  app.slots.settingsSection({ id: "selection-actions", title: "Selection actions", component: ActionSettings });
   app.contentScripts.register({
     id: "review-highlights",
     mount({ generation }) {
@@ -25,6 +28,7 @@ export default definePluginApp((app) => {
     title: "Feedback",
     icon: "MessageSquare",
     run({ threadId, message, selectedText }) {
+      const action = takeSelectionAction();
       if (
         message.role !== "assistant" ||
         message.threadId !== threadId ||
@@ -41,6 +45,7 @@ export default definePluginApp((app) => {
       reviewHighlights.captureSelection(invocationId, threadId, selectedText);
       reviewEditorStore.open({
         mode: "create",
+        action,
         selection: {
           invocationId,
           message: {

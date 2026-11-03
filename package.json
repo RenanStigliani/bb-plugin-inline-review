@@ -1,7 +1,7 @@
 {
-  "name": "bb-plugin-inline-review",
-  "version": "1.0.1",
-  "description": "Review exact assistant passages and send one clear feedback batch to the same BB thread.",
+  "name": "bb-plugin-inline-review-local",
+  "version": "1.1.0",
+  "description": "Review selected agent text and run custom selection actions in BB.",
   "license": "MIT",
   "author": {
     "name": "rdanhau",
@@ -9,12 +9,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rdanhau/bb-plugin-inline-review.git"
+    "url": "git+https://github.com/RenanStigliani/bb-plugin-inline-review.git"
   },
   "bugs": {
-    "url": "https://github.com/rdanhau/bb-plugin-inline-review/issues"
+    "url": "https://github.com/RenanStigliani/bb-plugin-inline-review/issues"
   },
-  "homepage": "https://github.com/rdanhau/bb-plugin-inline-review#readme",
+  "homepage": "https://github.com/RenanStigliani/bb-plugin-inline-review#readme",
   "keywords": [
     "bb",
     "feedback",
@@ -28,7 +28,7 @@
     "bbPluginSdk": ">=0.4.87"
   },
   "bb": {
-    "name": "Inline Review",
+    "name": "Inline Review (Local)",
     "description": "Review exact assistant passages and send one clear feedback batch to the same thread.",
     "branding": {
       "icon": "MessageSquare"
@@ -79,5 +79,11 @@
     "typescript": "^5.7.0",
     "vaul": "^1.1.2",
     "vitest": "5.0.1"
-  }
+  },
+  "contributors": [
+    {
+      "name": "Renan Stigliani",
+      "url": "https://github.com/RenanStigliani"
+    }
+  ]
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useComposerView, useRealtime, useRpc } from "@get-bb/plugin-sdk/app";
+import { experimental_Icon as Icon, useComposerView, useRealtime, useRpc } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
 import type { Annotation, ReviewDraft, rpcContract } from "../contract";
 import { reviewEditorStore } from "../lib/editor-store";
@@ -126,43 +126,37 @@ function ThreadReviewBanner({ threadId }: { threadId: string }) {
 
   return (
     <section className="min-w-0 rounded-lg border border-border bg-card px-3 py-2 text-sm">
-      <div className="flex min-w-0 items-center justify-between gap-2">
+      <div className="flex min-w-0 items-stretch gap-2">
         <button
           type="button"
-          className="min-w-0 text-left font-medium text-foreground"
+          className="-my-2 -ml-3 flex min-w-0 flex-1 items-center gap-2 rounded-lg py-2 pl-3 text-left font-medium text-foreground hover:bg-state-hover"
+          aria-label="Feedback"
           aria-expanded={expanded}
           onClick={() => {
             setConfirmingClear(false);
             setExpanded((value) => !value);
           }}
         >
+          <Icon name={expanded ? "ChevronDown" : "ChevronRight"} className="size-3.5 shrink-0" aria-hidden="true" />
           Feedback
           {draft.annotations.length ? (
-            <span className="ml-2 text-xs font-normal text-muted-foreground">
+            <span className="text-xs font-normal text-muted-foreground">
               {draft.annotations.length} {draft.annotations.length === 1 ? "item" : "items"}
             </span>
           ) : null}
         </button>
         <div className="flex shrink-0 items-center gap-1.5">
-          {!expanded ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setConfirmingClear(false);
-                setExpanded(true);
-              }}
-            >
-              Review
-            </Button>
-          ) : null}
           {hasFeedback ? (
             <Button
               size="sm"
               disabled={busy}
               onClick={send}
             >
-              {busy ? "Working…" : "Send feedback"}
+              <svg width="14" height="14" style={{ width: 14, height: 14, flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m22 2-7 20-4-9-9-4Z" />
+                <path d="M22 2 11 13" />
+              </svg>
+              {busy ? "Working…" : "Send"}
             </Button>
           ) : null}
         </div>
@@ -245,16 +239,6 @@ function ThreadReviewBanner({ threadId }: { threadId: string }) {
           {error ? <p role="alert" className="text-xs text-destructive">{error}</p> : null}
 
           <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setConfirmingClear(false);
-                setExpanded(false);
-              }}
-            >
-              Collapse
-            </Button>
             {hasFeedback && !confirmingClear ? (
               <Button
                 size="sm"
@@ -262,7 +246,7 @@ function ThreadReviewBanner({ threadId }: { threadId: string }) {
                 disabled={busy}
                 onClick={() => setConfirmingClear(true)}
               >
-                Clear
+                Clear ({draft.annotations.length})
               </Button>
             ) : null}
             {hasFeedback && confirmingClear ? (
@@ -297,11 +281,7 @@ function ThreadReviewBanner({ threadId }: { threadId: string }) {
                 </Button>
               </div>
             ) : null}
-            {hasFeedback ? (
-              <Button size="sm" disabled={busy} onClick={send}>
-                {busy ? "Working…" : "Send feedback"}
-              </Button>
-            ) : null}
+
           </div>
         </div>
       ) : null}

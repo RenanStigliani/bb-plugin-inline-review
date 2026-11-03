@@ -11,7 +11,7 @@ export function AnnotationEditor({
   quote: string;
   initial?: { kind: "comment" | "delete"; body: string };
   busy: boolean;
-  onSave: (value: { kind: "comment" | "delete"; body: string }) => void;
+  onSave: (value: { kind: "comment" | "delete"; body: string }, sendNow?: boolean) => void;
   onCancel: () => void;
   embedded?: boolean;
 }) {
@@ -54,24 +54,24 @@ export function AnnotationEditor({
   return (
     <form
       ref={formRef}
-      className={embedded ? "space-y-3" : "space-y-3 rounded border border-border p-3"}
+      className={embedded ? "space-y-2" : "space-y-2 rounded border border-border p-3"}
       onSubmit={(e) => {
         e.preventDefault();
         onSave({ kind: "comment", body });
       }}
     >
       {!embedded ? <h3>{initial ? "Edit annotation" : "New annotation"}</h3> : null}
-      <blockquote className="max-h-48 overflow-auto whitespace-pre-wrap break-words border-l-2 border-border pl-3">
+      <blockquote className="max-h-20 text-xs leading-relaxed overflow-auto whitespace-pre-wrap break-words border-l-2 border-border pl-3">
         {quote}
       </blockquote>
       <label className="block">
-        Comment or removal reason
+        Comment
         <textarea
           ref={textareaRef}
           autoFocus
           aria-label="Annotation feedback"
           className="mt-1 w-full rounded border border-border bg-background p-2"
-          rows={4}
+          rows={3}
           value={body}
           maxLength={10000}
           disabled={busy}
@@ -89,22 +89,9 @@ export function AnnotationEditor({
           }}
         />
       </label>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex items-center gap-2">
         <Button
-          type="submit"
-          disabled={busy || !body.trim()}
-        >
-          Comment
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={busy}
-          onClick={() => onSave({ kind: "delete", body })}
-        >
-          Remove
-        </Button>
-        <Button
+          size="sm"
           type="button"
           variant="outline"
           disabled={busy}
@@ -112,6 +99,25 @@ export function AnnotationEditor({
         >
           Cancel
         </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" type="submit" className="disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100" disabled={busy || !body.trim()}>
+            Add
+          </Button>
+          <Button
+            size="sm"
+            type="button"
+            variant="outline"
+            className="h-8 w-8 shrink-0 px-0"
+            aria-label="Send Now"
+            disabled={busy || !body.trim()}
+            onClick={() => onSave({ kind: "comment", body }, true)}
+          >
+            <svg width="14" height="14" style={{ width: 14, height: 14, flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m22 2-7 20-4-9-9-4Z" />
+              <path d="M22 2 11 13" />
+            </svg>
+          </Button>
+        </div>
       </div>
     </form>
   );
